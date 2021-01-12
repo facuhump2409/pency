@@ -56,3 +56,4 @@ build-iPhoneSimulator/
 # .rubocop-https?--*
 /venv
 *book.worksheet*
+.idea/
