@@ -57,3 +57,6 @@ build-iPhoneSimulator/
 /venv
 *book.worksheet*
 .idea/
+.~lock*
+TIE*
+__pycache__/
