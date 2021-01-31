@@ -30,7 +30,7 @@ def load_products(products):
 load_products(products)
 
 messages = orders_generator["Mensajes de wapp"]
-tipos_de_envios = ["Programado", "24 hs", "Retiro en Local"]
+tipos_de_envios = ["Programado", "24hs", "Retiro en Local"]
 
 
 class Coordinate:
@@ -51,14 +51,16 @@ def get_free_space_cell(cell, worksheet):
         current_value = worksheet.cell(coordinate.x, coordinate.y).value
     return coordinate
 
-def set_value_in_empty_space(excel_file,name,value):
+
+def set_value_in_empty_space(excel_file, name, value):
     try:
         worksheet = excel_file['Pedido']
     except:
         worksheet = excel_file['Pedido Pency']
     for row in worksheet.iter_rows():
         for cell in row:
-            if (cell.value != None and isinstance(cell.value, str) and cell.value.upper() == name.upper()): #No sea Null, sea string y sea igual al nombre del valor
+            if (cell.value != None and isinstance(cell.value,
+                                                  str) and cell.value.upper() == name.upper().strip()):  # No sea Null, sea string y sea igual al nombre del valor
                 coordinate = get_free_space_cell(cell, worksheet)
                 # chr(ord('a') + 1) # para conseguir proximo caracter
                 # cell.row -> te devuelve la fila
@@ -66,13 +68,15 @@ def set_value_in_empty_space(excel_file,name,value):
                 # Si es None es que no hay nada, habria que conseguir la proxima letra del abecedario de esa columna que esta vacia
                 worksheet.cell(coordinate.x, coordinate.y).value = value
 
+
 def set_excel_attributes(excel_file, excel_dictionary):
     for key, value in excel_dictionary.items():
-        set_value_in_empty_space(excel_file,key,value)
+        set_value_in_empty_space(excel_file, key, value)
 
-def set_products_to_excel(excel_file,products):
+
+def set_products_to_excel(excel_file, products):
     for product in products:
-        set_value_in_empty_space(excel_file,product.name,product.get_qty())
+        set_value_in_empty_space(excel_file, product.name, product.get_qty())
 
 
 message_row = 0
@@ -81,7 +85,14 @@ message_row = 0
 def add_atributes_to_excels(excels, excel_dictionary, order_products):
     for excel in excels:
         set_excel_attributes(excel, excel_dictionary)
-        #set_products_to_excel(excel,order_products)
+        set_products_to_excel(excel, order_products)
+
+
+def get_tipo_de_envio(tipos_de_envios, texto):
+    for tipo_de_envio in tipos_de_envios:
+        if tipo_de_envio.upper() in texto.upper():
+            return tipo_de_envio
+    return 'Programado' #Es el valor default
 
 
 for message in messages.iter_rows(values_only=True):
@@ -90,7 +101,7 @@ for message in messages.iter_rows(values_only=True):
     excel_dictionary = {}
     order = message[1]
     excel_dictionary['Fecha de pedido'] = date.today().strftime("%d/%m/%Y")
-    excel_dictionary['Tipo de envío'] = 'Programada'  # TODO cambiar esto, por ahora lo dejo hardcodeado
+    excel_dictionary['Tipo de envío'] = get_tipo_de_envio(tipos_de_envios,re.search("(?i)(?<=Fecha de entrega: ).+", order)[0])
     # total = re.search("(?<=Total\: ).+",order)[0]
     excel_dictionary['Pedido'] = re.search("(?i)(?<=Pedido: ).+", order)[0]
     excel_dictionary['Rango Horario'] = "16 a 20hs"  # Para 24 hs
@@ -124,7 +135,7 @@ for message in messages.iter_rows(values_only=True):
         # items_dictionary[product] = qty
     # excel_dictionary['Zona'] = re.search("(?i)(?<=Zona de entrega: ).+",order)[0]
     messages.cell(message_row, 1).value = "Si"
-    add_atributes_to_excels([client_order,consolidated_orders],excel_dictionary,order_products)
+    add_atributes_to_excels([client_order, consolidated_orders], excel_dictionary, order_products)
     # set_excel_attributes(client_order, excel_dictionary)
     # set_excel_attributes(client_order, order_products)
     client_order.save(excel_dictionary['Pedido'] + excel_dictionary['Cliente'] + ".xlsx")
