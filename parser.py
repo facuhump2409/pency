@@ -52,10 +52,13 @@ def get_free_space_cell(cell, worksheet):
     return coordinate
 
 def set_value_in_empty_space(excel_file,name,value):
-    worksheet = excel_file['Pedido']
+    try:
+        worksheet = excel_file['Pedido']
+    except:
+        worksheet = excel_file['Pedido Pency']
     for row in worksheet.iter_rows():
         for cell in row:
-            if (cell.value != None and cell.value.upper() == name.upper()):
+            if (cell.value != None and isinstance(cell.value, str) and cell.value.upper() == name.upper()): #No sea Null, sea string y sea igual al nombre del valor
                 coordinate = get_free_space_cell(cell, worksheet)
                 # chr(ord('a') + 1) # para conseguir proximo caracter
                 # cell.row -> te devuelve la fila
@@ -66,15 +69,6 @@ def set_value_in_empty_space(excel_file,name,value):
 def set_excel_attributes(excel_file, excel_dictionary):
     for key, value in excel_dictionary.items():
         set_value_in_empty_space(excel_file,key,value)
-        # for row in worksheet.iter_rows():
-        #     for cell in row:
-        #         if (cell.value != None and cell.value.upper() == key.upper()):
-        #             coordinate = get_free_space_cell(cell, worksheet)
-        #             # chr(ord('a') + 1) # para conseguir proximo caracter
-        #             # cell.row -> te devuelve la fila
-        #             # cell.column -> te devuelve la columna
-        #             # Si es None es que no hay nada, habria que conseguir la proxima letra del abecedario de esa columna que esta vacia
-        #             worksheet.cell(coordinate.x, coordinate.y).value = value
 
 def set_products_to_excel(excel_file,products):
     for product in products:
@@ -82,6 +76,14 @@ def set_products_to_excel(excel_file,products):
 
 
 message_row = 0
+
+
+def add_atributes_to_excels(excels, excel_dictionary, order_products):
+    for excel in excels:
+        set_excel_attributes(excel, excel_dictionary)
+        #set_products_to_excel(excel,order_products)
+
+
 for message in messages.iter_rows(values_only=True):
     message_row += 1
     if (message[0] == 'Si' or message[0] == 'Procesado'): continue  # or message[1] == None
@@ -121,13 +123,13 @@ for message in messages.iter_rows(values_only=True):
             order_products.append(Plato(final_qty * qty, nombre))
         # items_dictionary[product] = qty
     # excel_dictionary['Zona'] = re.search("(?i)(?<=Zona de entrega: ).+",order)[0]
-    print(messages.cell(message_row, 1).value)
     messages.cell(message_row, 1).value = "Si"
-    set_excel_attributes(client_order, excel_dictionary)
-    set_excel_attributes(client_order, order_products)
+    add_atributes_to_excels([client_order,consolidated_orders],excel_dictionary,order_products)
+    # set_excel_attributes(client_order, excel_dictionary)
+    # set_excel_attributes(client_order, order_products)
     client_order.save(excel_dictionary['Pedido'] + excel_dictionary['Cliente'] + ".xlsx")
     # Setear en Si el procesado
-#orders_generator.save(orders_folder_year + "/Generador de pedidos/Generador de pedidos.xlsx") TODO agregar despues esto
-#consolidated_orders.save("Pedidos/2021/012020/Pedidos consolidados 01-2021.xlsx")
+orders_generator.save(orders_folder_year + "/Generador de pedidos/Generador de pedidos.xlsx")
+consolidated_orders.save("Pedidos/2021/012020/Pedidos consolidados 01-2021.xlsx")
 # orders_generator.save("26-12 Planilla de pedidos.xlsx")
 # def work_excel
