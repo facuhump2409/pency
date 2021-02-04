@@ -14,3 +14,5 @@ class Combo:
     self.name = name
     self.platos = [plato.set_multiplier(qty) for plato in platos]
     self.qty = qty
+  def get_platos(self):
+    return self.platos + [Plato(self.qty,self.name)]

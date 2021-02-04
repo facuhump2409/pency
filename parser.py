@@ -5,7 +5,7 @@ from datetime import date
 from openpyxl import *
 
 # Spreadsheet.client_encoding = 'windows-1251:utf-8'
-from model.pedido import Plato
+from model.pedido import Plato, Combo
 
 orders_folder_year = "Pedidos/2021/012020"
 clients_folder = orders_folder_year + "/Generador de pedidos/Pedidos"
@@ -104,6 +104,25 @@ def get_tipo_de_envio(tipos_de_envios, texto):
     return 'Programado'  # Es el valor default
 
 
+def work_products(product,order_products,order_qty):
+    if "Combo" in product:
+        combo_name = re.search("(?i).+(?=plato)",product)[0].strip()
+        combo_name = re.sub("\d\.|\(.+\)","",combo_name).strip()
+        product = re.search("(?i)(?<=:).+(?=-)",product)[0]
+        products = product.split(",")
+        for product in products:
+            nombre = re.sub("X\d","",product)
+            qty = re.search("X\d", product)
+            final_qty = 1 if qty == None else int(re.sub("X", "", qty[0]).strip())
+            order_products.append(Plato(final_qty, nombre))
+        combo = Combo(order_products,order_qty,combo_name)
+        return combo.get_platos()
+    else:
+        return order_products.append(Plato(order_qty, product))
+
+
+
+
 for message in messages.iter_rows(values_only=True):
     message_row += 1
     if (message[0] == 'Si' or message[0] == 'Procesado'): continue  # or message[1] == None
@@ -116,7 +135,8 @@ for message in messages.iter_rows(values_only=True):
     # total = re.search("(?<=Total\: ).+",order)[0]
     excel_dictionary['Pedido'] = re.search("(?i)(?<=Pedido: ).+", order)[0]
     excel_dictionary['Rango Horario'] = "16 a 20hs"  # Para 24 hs
-    excel_dictionary['Dirección'] = re.search("(?i)(?<=Direcci.n de entrega: ).+", order)[0]
+    direccion = re.search("(?i)(?<=Direcci.n de entrega: ).+", order)[0]
+    excel_dictionary['Dirección'] = re.sub("\*","",direccion).strip()
     payment_method = re.search("(?i)(?<=Forma de pago: ).+", order)[0].strip()
     excel_dictionary['Medio de pago'] = re.sub("\(.+\)", "", payment_method).strip()
     excel_dictionary['Cliente'] = re.search("(?i)(?<=Nombre y Apellido: ).+", order)[0]
@@ -134,25 +154,24 @@ for message in messages.iter_rows(values_only=True):
         guarnicion_regex = "(?i)Guarnici.n(es)?"
         product = re.sub(r"" + qty_regex + "|" + guarnicion_regex + ".+", "",
                          re.search("(?i)(?<=—).+(?=\>)", item)[0].strip())
-        order_products.append(Plato(qty, product))  # TODO Ver despues tema de multiplicador
+        #order_products.append(Plato(qty, product))
         guarniciones = re.sub(guarnicion_regex + "?:", "",
                               re.search(guarnicion_regex + "?(\(.+)?: .+(?=>)", item)[0]).strip()
         guarniciones = re.findall('[A-W][^A-W]*', guarniciones)
+        orders_guarnicion = []
         for guarnicion in guarniciones:
             nombre = re.sub(guarnicion_regex + "?: |X\d|,", "", guarnicion).strip()
             guarnicion_qty = re.search("X\d", guarnicion)
             final_qty = 1 if guarnicion_qty == None else int(re.sub("X", "", guarnicion_qty[0]).strip())
-            order_products.append(Plato(final_qty * qty, nombre))
+            order_products.append(Plato(final_qty, nombre))
+        final_products = work_products(product,order_products,qty)
     # excel_dictionary['Zona'] = re.search("(?i)(?<=Zona de entrega: ).+",order)[0]
     messages.cell(message_row, 1).value = "Si"
-    add_atributes_to_excels([client_order, consolidated_orders], excel_dictionary, order_products)
+    add_atributes_to_excels([client_order, consolidated_orders], excel_dictionary, final_products)
     client_order.save(excel_dictionary['Pedido'] + excel_dictionary['Cliente'] + ".xlsx")
     client_order.close()
-orders_generator.save(orders_folder_year + "/Generador de pedidos/Generador de pedidos.xlsx")
-consolidated_orders.save("Pedidos/2021/012020/Pedidos consolidados 01-2021.xlsx")
-
-# TODO ver tema de que escribe el mismo archivo entonces termina escribiendo mal al cliente, y agrupar por productos para evitar que se escriba "Papas" como distintos pedidos
-# Que en el mismo pedido se haga primero una agrupacion por productos
-# Terminar de testear si escribe en la siguiente columna, hacerlo por partes para que no se confunda con los otros errores
-# Probable que dentro del for se abra la planilla del cliente de nuevo
-# Buscar como cerrar los archivos
+#orders_generator.save(orders_folder_year + "/Generador de pedidos/Generador de pedidos.xlsx")
+#consolidated_orders.save("Pedidos/2021/012020/Pedidos consolidados 01-2021.xlsx")
+consolidated_orders.close()
+orders_generator.close()
+# TODO terminar de ver que se hagan los combos
