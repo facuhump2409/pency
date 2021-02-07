@@ -60,3 +60,4 @@ build-iPhoneSimulator/
 *.~lock*
 TIE*
 __pycache__/
+*.xlsx

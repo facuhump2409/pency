@@ -6,14 +6,15 @@ from openpyxl import *
 
 # Spreadsheet.client_encoding = 'windows-1251:utf-8'
 from model.pedido import Plato, Combo
-
+excels = []
+# TODO abrir dos archivos, uno con data_only y otro con todas las formulas y escribir en el que tiene todas las formulas
 orders_folder_year = "Pedidos/2021/012020"
 clients_folder = orders_folder_year + "/Generador de pedidos/Pedidos"
 orders_generator = load_workbook(orders_folder_year + "/Generador de pedidos/Generador de pedidos.xlsx")
-
-consolidated_orders = load_workbook("Pedidos/2021/012020/Pedidos consolidados 01-2021.xlsx", data_only=True)
-prices = consolidated_orders['Precios y Menú']
-
+consolidated_orders_with_formulas = load_workbook("Pedidos/2021/012020/Pedidos consolidados 01-2021.xlsx")
+consolidated_orders_data_only = load_workbook("Pedidos/2021/012020/Pedidos consolidados 01-2021.xlsx", data_only=True)
+prices = consolidated_orders_data_only['Precios y Menú']
+excels.extend([consolidated_orders_with_formulas,consolidated_orders_data_only,orders_generator])
 # costo_de_envio = 0
 # envio_gratis = 0
 products = {}  # para saber cual es premium, guarnicion o daily
@@ -51,11 +52,13 @@ def get_free_space_cell(cell, worksheet,order_id):
     return coordinate
 
 
-def set_value_in_empty_space(excel_file, name, value,order_id):
+def set_value_in_empty_space(excel_file_with_data,excel_file_with_formula, name, value,order_id):
     try:
-        worksheet = excel_file['Pedido']
+        worksheet = excel_file_with_data['Pedido']
+        worksheet_with_formulas = excel_file_with_formula['Pedido']
     except:
-        worksheet = excel_file['Pedido Pency']
+        worksheet = excel_file_with_data['Pedido Pency']
+        worksheet_with_formulas = excel_file_with_formula['Pedido Pency']
     for row in worksheet.iter_rows():
         for cell in row:
             if (cell.value != None and isinstance(cell.value, str)): # No sea Null y sea string
@@ -68,33 +71,34 @@ def set_value_in_empty_space(excel_file, name, value,order_id):
                     # cell.row -> te devuelve la fila
                     # cell.column -> te devuelve la columna
                     # Si es None es que no hay nada, habria que conseguir la proxima letra del abecedario de esa columna que esta vacia
-                    actual_value = worksheet.cell(coordinate.x, coordinate.y).value or 0
+                    actual_value = worksheet_with_formulas.cell(coordinate.x, coordinate.y).value or 0
                     if actual_value != 0:
-                        worksheet.cell(coordinate.x, coordinate.y).value = int(value) + int(actual_value)
+                        worksheet_with_formulas.cell(coordinate.x, coordinate.y).value = int(value) + int(actual_value)
                     else:
-                        worksheet.cell(coordinate.x, coordinate.y).value = value
+                        worksheet_with_formulas.cell(coordinate.x, coordinate.y).value = value
                     return
 
 
 
-def set_excel_attributes(excel_file, excel_dictionary,order_id):
+def set_excel_attributes(excel_file_with_data,excel_file_with_formula, excel_dictionary,order_id):
     for key, value in excel_dictionary.items():
-        set_value_in_empty_space(excel_file, key, value,order_id)
+        set_value_in_empty_space(excel_file_with_data,excel_file_with_formula, key, value,order_id)
 
 
-def set_products_to_excel(excel_file, products,order_id):
+def set_products_to_excel(excel_file_with_data,excel_file_with_formula, products,order_id):
     for product in products:
-        set_value_in_empty_space(excel_file, product.name, product.get_qty(),order_id)
+        set_value_in_empty_space(excel_file_with_data,excel_file_with_formula, product.name, product.get_qty(),order_id)
 
 
 message_row = 0
 
 
 def add_atributes_to_excels(excels, excel_dictionary, order_products):
+    # First excel has data, and second excel has formulas
     order_id = excel_dictionary['Pedido']
     for excel in excels:
-        set_excel_attributes(excel, excel_dictionary,order_id)
-        set_products_to_excel(excel, order_products,order_id)
+        set_excel_attributes(excel[0],excel[1], excel_dictionary,order_id)
+        set_products_to_excel(excel[0],excel[1], order_products,order_id)
 
 
 def get_tipo_de_envio(tipos_de_envios, texto):
@@ -113,7 +117,7 @@ def work_products(product,order_products,order_qty):
         for product in products:
             nombre = re.sub("X\d","",product)
             qty = re.search("X\d", product)
-            final_qty = 1 if qty == None else int(re.sub("X", "", qty[0]).strip())
+            final_qty = 1 if qty is None else int(re.sub("X", "", qty[0]).strip())
             order_products.append(Plato(final_qty, nombre))
         combo = Combo(order_products,order_qty,combo_name)
         return combo.get_platos()
@@ -125,8 +129,9 @@ def work_products(product,order_products,order_qty):
 
 for message in messages.iter_rows(values_only=True):
     message_row += 1
-    if (message[0] == 'Si' or message[0] == 'Procesado'): continue  # or message[1] == None
-    client_order = load_workbook(clients_folder + "/Planilla Cliente.xlsx", data_only=True)
+    if message[0] == 'Si' or message[0] == 'Procesado': continue  # or message[1] == None
+    client_order_data_only = load_workbook(clients_folder + "/Planilla Cliente.xlsx", data_only=True)
+    client_order_with_formula = load_workbook(clients_folder + "/Planilla Cliente.xlsx")
     excel_dictionary = {}
     order = message[1]
     excel_dictionary['Fecha de pedido'] = date.today().strftime("%d/%m/%Y")
@@ -167,11 +172,13 @@ for message in messages.iter_rows(values_only=True):
         final_products = work_products(product,order_products,qty)
     # excel_dictionary['Zona'] = re.search("(?i)(?<=Zona de entrega: ).+",order)[0]
     messages.cell(message_row, 1).value = "Si"
-    add_atributes_to_excels([client_order, consolidated_orders], excel_dictionary, final_products)
-    client_order.save(excel_dictionary['Pedido'] + excel_dictionary['Cliente'] + ".xlsx")
-    client_order.close()
+    add_atributes_to_excels([[client_order_data_only,client_order_with_formula], [consolidated_orders_data_only,consolidated_orders_with_formulas]], excel_dictionary, final_products)
+    client_order_with_formula.save(excel_dictionary['Pedido'] + excel_dictionary['Cliente'] + ".xlsx")
+    client_order_with_formula.close()
+    client_order_data_only.close()
 #orders_generator.save(orders_folder_year + "/Generador de pedidos/Generador de pedidos.xlsx")
-#consolidated_orders.save("Pedidos/2021/012020/Pedidos consolidados 01-2021.xlsx")
-consolidated_orders.close()
-orders_generator.close()
+# consolidated_orders_with_formulas.save("Pedidos/2021/012020/Pedidos consolidados 01-2021.xlsx")
+for excel in excels:
+    excel.close()
 # TODO terminar de ver que se hagan los combos
+# TODO ARMAR TESTS URGENTEEE
