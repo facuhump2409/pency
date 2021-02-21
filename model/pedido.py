@@ -32,7 +32,7 @@ class Combo:
         return self.platos + [Plato(self.qty, self.name)]
 
 
-def get_tipo_de_envio(tipos_de_envios, texto):
+def get_tipo_de_envio(texto):
     for tipo_de_envio in tipos_de_envios:
         if tipo_de_envio.upper() in texto.upper():
             return tipo_de_envio
@@ -60,10 +60,7 @@ def divide_surtido_products(products):
 
 def work_products(product, order_products, order_qty, guarniciones, products_dictionary):
     if "Combo" in product:
-        # combo_name = re.search("(?i).+(?=plato)", product)[0].strip()
         combo_name = re.search("(?i)Combo (Surtido|Premium|Daily)", product)[0].strip()
-        # combo_name = re.sub("\d\.|\(.+\)", "", combo_name).strip()
-        # product_without_between_brackets = get_rid_between_brackets(product)
         product = re.search("(?i)(?<=:).+(?=-)", product)[0]
         products = product.split(",")
         products_list = []
@@ -85,10 +82,9 @@ def work_products(product, order_products, order_qty, guarniciones, products_dic
         order_products.extend(guarniciones)
 
 
-def get_basic_information(message, excel_dictionary, order):
+def get_basic_information(excel_dictionary, order):
     excel_dictionary['Fecha de pedido'] = date.today().strftime("%d/%m/%Y")
-    excel_dictionary['Tipo de envío'] = get_tipo_de_envio(tipos_de_envios,
-                                                          re.search("(?i)(?<=Fecha de entrega: ).+", order)[0])
+    excel_dictionary['Tipo de envío'] = get_tipo_de_envio(re.search("(?i)(?<=Fecha de entrega: ).+", order)[0])
     # total = re.search("(?<=Total\: ).+",order)[0]
     excel_dictionary['Pedido'] = re.search("(?i)(?<=Pedido: ).+", order)[0]
     excel_dictionary['Rango Horario'] = "16 a 20hs"  # Para 24 hs

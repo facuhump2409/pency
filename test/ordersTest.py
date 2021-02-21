@@ -13,6 +13,7 @@ class MyTestCase(unittest.TestCase):
                     Dirección de entrega: Av. Santa Fé 3000
                     Forma de pago: Transferencia bancaria (Alias: SMARTFOODSOLUTIONS)
                     """
+
     def test_getsBasicInformationCorrectly(self):
         self.assertEqual(True, True)
 

@@ -20,6 +20,7 @@ def set_products_to_excel(excel_file_with_data, excel_file_with_formula, product
         set_value_in_empty_space(excel_file_with_data, excel_file_with_formula, product.name, product.get_qty(),
                                  order_id)
 
+
 def add_atributes_to_excels(excels, excel_dictionary, order_products):
     # First excel has data, and second excel has formulas
     order_id = excel_dictionary['Pedido']
@@ -27,5 +28,6 @@ def add_atributes_to_excels(excels, excel_dictionary, order_products):
         set_excel_attributes(excel[0], excel[1], excel_dictionary, order_id)
         set_products_to_excel(excel[0], excel[1], order_products, order_id)
 
+
 def get_rid_between_brackets(string):
-    return re.sub("\(.+\)","",string)
+    return re.sub("\(.+\)", "", string)
