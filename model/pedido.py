@@ -58,7 +58,7 @@ def divide_surtido_products(products):
     return new_products
 
 
-def work_products(product, order_products, order_qty, guarniciones, consolidated_orders_data_only):
+def work_products(product, order_products, order_qty, guarniciones, products_dictionary):
     if "Combo" in product:
         # combo_name = re.search("(?i).+(?=plato)", product)[0].strip()
         combo_name = re.search("(?i)Combo (Surtido|Premium|Daily)", product)[0].strip()
@@ -78,7 +78,9 @@ def work_products(product, order_products, order_qty, guarniciones, consolidated
         order_products.extend(combo.get_platos())
     else:
         guarniciones = list(map(lambda x: x.set_multiplier(order_qty), guarniciones))
-        add_type_of_order(order_qty, product, order_products, consolidated_orders_data_only)
+        # add_type_of_order(order_qty, product, order_products, consolidated_orders_data_only)
+        product_type = products_dictionary[product.strip().upper()]
+        order_products.append(Plato(order_qty, product_type))
         order_products.append(Plato(order_qty, product.strip()))
         order_products.extend(guarniciones)
 
