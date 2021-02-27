@@ -3,7 +3,7 @@ import os
 import datetime
 
 from openpyxl import *
-from model.commons import load_products, add_atributes_to_excels
+from model.commons import load_products_in_upper_case, add_atributes_to_excels
 from model.pedido import Plato, get_basic_information, work_products
 
 excels = []
@@ -21,7 +21,7 @@ prices = consolidated_orders_data_only['Precios y Menú']
 excels.extend([consolidated_orders_with_formulas, consolidated_orders_data_only, orders_generator])
 products_dictionary = {}  # para saber cual es premium, guarnicion o daily
 
-load_products(products_dictionary, prices)
+load_products_in_upper_case(products_dictionary, prices)
 
 messages = orders_generator["Mensajes de wapp"]
 
@@ -50,7 +50,8 @@ def process_orders(messages):
                 extra_brackets_info = "\s?(\(.+)?:"
                 cleaner_item = re.search(guarnicion_regex + extra_brackets_info + " .+(?=>)", item)[0]
                 guarniciones = re.sub(guarnicion_regex + extra_brackets_info, "", cleaner_item).strip()
-                guarniciones = re.findall('[A-W][^A-W]*', guarniciones)
+                #guarniciones = re.findall('[A-W][^A-W]*', guarniciones)
+                guarniciones = extract_guarniciones(products_dictionary,guarniciones)
                 guarniciones_list = []
                 for guarnicion in guarniciones:
                     nombre = re.sub(guarnicion_regex + "?: |X\d|,", "", guarnicion).strip()

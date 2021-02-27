@@ -3,7 +3,7 @@ import re
 from model.coordinates import set_value_in_empty_space
 
 
-def load_products(products, prices):
+def load_products_in_upper_case(products, prices):
     for row in prices.iter_rows(values_only=True):
         if (row[8] != None and "=" not in row[8] and row[7] != "Producto"): products[row[8].upper()] = row[7]
         # if row[2] == "Costo de envío": costo_de_envio = row[4]

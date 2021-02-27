@@ -98,3 +98,11 @@ def get_basic_information(excel_dictionary, order):
     except:
         excel_dictionary['Fecha de entrega'] = (datetime.date.today() + datetime.timedelta(days=1)).strftime(
             "%d/%m")
+
+def extract_guarniciones(products_dictionary,guarniciones):
+    upper_case_guarniciones = guarniciones.upper()
+    found_guarniciones = []
+    for product in products_dictionary.keys():
+        if product.upper() in upper_case_guarniciones:
+            found_guarniciones.append(product)
+    return found_guarniciones
