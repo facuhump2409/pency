@@ -1,16 +1,22 @@
 import re
+import os
+import datetime
 
 from openpyxl import *
-
 from model.commons import load_products, add_atributes_to_excels
 from model.pedido import Plato, get_basic_information, work_products
 
 excels = []
-orders_folder_year = "Pedidos/2021/012020"
-clients_folder = orders_folder_year + "/Generador de pedidos/Pedidos/"
-orders_generator = load_workbook(orders_folder_year + "/Generador de pedidos/Generador de pedidos.xlsx")
-consolidated_orders_with_formulas = load_workbook("Pedidos/2021/012020/Pedidos consolidados 01-2021.xlsx")
-consolidated_orders_data_only = load_workbook("Pedidos/2021/012020/Pedidos consolidados 01-2021.xlsx", data_only=True)
+dir_path = os.path.dirname(os.path.realpath(__file__))
+now = datetime.datetime.now()
+month,year = str(now.month), str(now.year)
+month = "0" + month if len(month) == 1 else month
+# TODO agregar el mes a las carpetas y archivos
+orders_folder_year = dir_path + "/Pedidos/" + year + "/012020/"
+clients_folder = orders_folder_year + "Generador de pedidos/Pedidos/"
+orders_generator = load_workbook(orders_folder_year + "Generador de pedidos/Generador de pedidos.xlsx")
+consolidated_orders_with_formulas = load_workbook(orders_folder_year + "Pedidos consolidados 01-" + year + ".xlsx")
+consolidated_orders_data_only = load_workbook(orders_folder_year + "Pedidos consolidados 01-" + year + ".xlsx", data_only=True)
 prices = consolidated_orders_data_only['Precios y Menú']
 excels.extend([consolidated_orders_with_formulas, consolidated_orders_data_only, orders_generator])
 products_dictionary = {}  # para saber cual es premium, guarnicion o daily
@@ -65,7 +71,7 @@ def process_orders(messages):
         except:
             messages.cell(message_row, 1).value = "ERROR"
     orders_generator.save(orders_folder_year + "/Generador de pedidos/Generador de pedidos.xlsx")
-    consolidated_orders_with_formulas.save("Pedidos/2021/012020/Pedidos consolidados 01-2021.xlsx")
+    consolidated_orders_with_formulas.save(orders_folder_year + "Pedidos consolidados 01-" + year + ".xlsx")
     for excel in excels:
         excel.close()
 
