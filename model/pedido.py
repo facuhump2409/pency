@@ -2,15 +2,17 @@ import datetime
 import re
 from datetime import date
 
+from files import products_dictionary
 from model.commons import get_rid_between_brackets
 from model.coordinates import find_cell_with_value
 
 tipos_de_envios = ["Programado", "24hs", "Retiro en Local"]
+guarnicion_regex = "(?i)Guarnici.n(es)?"
 
 
 class Plato:
     def __init__(self, qty, name, multiplier=None):
-        self.name = name
+        self.name = name.strip()
         self.qty = qty
         self.multiplier = 1 if multiplier is None else multiplier
 
@@ -20,6 +22,11 @@ class Plato:
     def set_multiplier(self, multiplier):
         self.multiplier = multiplier
         return self
+
+    def __eq__(self, other):
+        if isinstance(other, Plato):
+            return (self.name == other.name and self.get_qty() == other.get_qty())
+        return False
 
 
 class Combo:
@@ -58,7 +65,7 @@ def divide_surtido_products(products):
     return new_products
 
 
-def work_products(product, order_products, order_qty, guarniciones, products_dictionary):
+def work_products(product, order_products, order_qty, guarniciones):
     if "Combo" in product:
         combo_name = re.search("(?i)Combo (Surtido|Premium|Daily)", product)[0].strip()
         product = re.search("(?i)(?<=:).+(?=-)", product)[0]
@@ -66,7 +73,7 @@ def work_products(product, order_products, order_qty, guarniciones, products_dic
         products_list = []
         divided_products = divide_surtido_products(products)
         for product in divided_products:
-            nombre = re.sub("(?i)(X\d|(Daily|Premium)|:)", "", product).strip()
+            nombre = re.sub("(?i)(X\d|(Daily|Premium)|:)", "", product.strip()).strip()
             qty = re.search("X\d", product)
             final_qty = 1 if qty is None else int(re.sub("X", "", qty[0]).strip())
             products_list.append(Plato(final_qty, nombre))
@@ -99,10 +106,39 @@ def get_basic_information(excel_dictionary, order):
         excel_dictionary['Fecha de entrega'] = (datetime.date.today() + datetime.timedelta(days=1)).strftime(
             "%d/%m")
 
-def extract_guarniciones(products_dictionary,guarniciones):
+
+def extract_guarniciones(item):
+    extra_brackets_info = "\s?(\(.+)?:"
+    cleaner_item = re.search(guarnicion_regex + extra_brackets_info + " .+(?=>)", item)[0]
+    guarniciones = re.sub(guarnicion_regex + extra_brackets_info, "", cleaner_item).strip()
     upper_case_guarniciones = guarniciones.upper()
     found_guarniciones = []
     for product in products_dictionary.keys():
         if product.upper() in upper_case_guarniciones:
             found_guarniciones.append(product)
-    return found_guarniciones
+    guarniciones_list = []
+    for guarnicion in found_guarniciones:
+        nombre = guarnicion.strip()  # re.sub(guarnicion_regex + "?: |X\d|,", "", guarnicion).strip()
+        guarnicion_qty = re.search("(?i)(?<=" + guarnicion + ") X\d((?=,)|(?=$))",
+                                   guarniciones)  # re.search("X\d", guarnicion)
+        final_qty = 1 if guarnicion_qty == None else int(re.sub("X", "", guarnicion_qty[0]).strip())
+        guarniciones_list.append(Plato(final_qty, nombre))
+    return guarniciones_list
+
+
+def extract_items_from_order(order):
+    items_regex = "(?i)— .+"
+    items = re.findall(items_regex, order)
+    order_products = []
+    for item in items:
+        qty_regex = "\[ \d \]"
+        qty_product = re.search(qty_regex, item)
+        qty = 1 if qty_product == None else int(re.sub("\[|\]", "", qty_product[0]).strip())
+        product = re.sub(r"" + qty_regex + "|" + guarnicion_regex + ".+", "",
+                         re.search("(?i)(?<=—).+(?=\>)", item)[0].strip())
+        extra_brackets_info = "\s?(\(.+)?:"
+        cleaner_item = re.search(guarnicion_regex + extra_brackets_info + " .+(?=>)", item)[0]
+        dirty_guarniciones = re.sub(guarnicion_regex + extra_brackets_info, "", cleaner_item).strip()
+        # guarniciones = re.findall('[A-W][^A-W]*', guarniciones)
+        work_products(product, order_products, qty, extract_guarniciones(item))
+    return order_products
