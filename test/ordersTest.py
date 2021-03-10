@@ -40,7 +40,7 @@ class MyTestCase(unittest.TestCase):
         self.assertEqual(expected_result[0].name, result_guarniciones[0].name)
         self.assertEqual(expected_result[0].get_qty(), result_guarniciones[0].get_qty())
 
-    def test_main_dish_correctly(self):
+    def test_main_dish_extracted_correctly(self):
         expected_result = sorted([Plato(2, 'BBQ Ribs'), Plato(1, 'Puré de papas'.upper(), 2), Plato(2, 'Premium')],
                                  key=lambda x: x.name, reverse=True)
         result_order = sorted(extract_items_from_order(self.order), key=lambda x: x.name, reverse=True)
