@@ -61,3 +61,4 @@ build-iPhoneSimulator/
 TIE*
 __pycache__/
 *.xlsx
+parser.spec
